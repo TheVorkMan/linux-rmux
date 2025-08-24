@@ -4,7 +4,7 @@
 # subdirectories here. Add them in the ".gitignore" file
 # in that subdirectory instead.
 #
-# NOTE! Please use 'git ls-files -i -c --exclude-per-directory=.gitignore'
+# NOTE! Please use 'git ls-files -i --exclude-standard'
 # command after changing this file, to see if there are
 # any tracked files which get ignored after the change.
 #
@@ -21,12 +21,9 @@
 *.dtb
 *.dtbo
 *.dtb.S
-*.dtbo.S
 *.dwo
-*.dylib
 *.elf
 *.gcno
-*.gcda
 *.gz
 *.i
 *.ko
@@ -51,12 +48,12 @@
 *.so.dbg
 *.su
 *.symtypes
+*.symversions
 *.tab.[ch]
 *.tar
 *.xz
 *.zst
 Module.symvers
-dtbs-list
 modules.order
 
 #
@@ -68,20 +65,18 @@ modules.order
 /vmlinux.32
 /vmlinux.map
 /vmlinux.symvers
-/vmlinux.unstripped
 /vmlinux-gdb.py
 /vmlinuz
 /System.map
 /Module.markers
 /modules.builtin
 /modules.builtin.modinfo
-/modules.builtin.ranges
 /modules.nsdeps
 
 #
 # RPM spec file (make rpm-pkg)
 #
-/rpmbuild/
+/*.spec
 
 #
 # Debian directory (make deb-pkg)
@@ -99,35 +94,25 @@ modules.order
 /tar-install/
 
 #
-# pacman files (make pacman-pkg)
-#
-/PKGBUILD
-/pacman/
-
-#
 # We don't want to ignore the following even if they are dot-files
 #
 !.clang-format
-!.clippy.toml
 !.cocciconfig
-!.editorconfig
 !.get_maintainer.ignore
 !.gitattributes
 !.gitignore
-!.kunitconfig
 !.mailmap
-!.pylintrc
-!.rustfmt.toml
 
-# Added:
+# Added
 !.github
 !.dockerignore
-
+!.Dockerfile*
 #
 # Generated include files
 #
 /include/config/
 /include/generated/
+/include/ksym/
 /arch/*/include/generated/
 
 # stgit generated dirs
@@ -139,7 +124,6 @@ series
 
 # ctags files
 tags
-!tags/
 TAGS
 
 # cscope files
@@ -155,6 +139,7 @@ GTAGS
 # id-utils files
 ID
 
+*.orig
 *~
 \#*#
 
