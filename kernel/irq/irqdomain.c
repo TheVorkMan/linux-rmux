@@ -19,6 +19,9 @@
 #include <linux/slab.h>
 #include <linux/smp.h>
 #include <linux/fs.h>
+#ifdef CONFIG_X86_PS4
+#include <asm/ps4.h>
+#endif
 
 static LIST_HEAD(irq_domain_list);
 static DEFINE_MUTEX(irq_domain_mutex);
@@ -539,7 +542,11 @@ struct irq_domain *irq_find_matching_fwspec(struct irq_fwspec *fwspec,
 	 */
 	mutex_lock(&irq_domain_mutex);
 	list_for_each_entry(h, &irq_domain_list, link) {
+#ifdef CONFIG_X86_PS4
+		if (h->ops->select && (bus_token != DOMAIN_BUS_ANY || x86_ps4_present()))
+#else
 		if (h->ops->select && bus_token != DOMAIN_BUS_ANY)
+#endif
 			rc = h->ops->select(h, fwspec, bus_token);
 		else if (h->ops->match)
 			rc = h->ops->match(h, to_of_node(fwnode), bus_token);
