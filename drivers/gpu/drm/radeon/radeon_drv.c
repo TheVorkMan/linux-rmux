@@ -48,6 +48,8 @@
 #include <drm/drm_vblank.h>
 #include <drm/radeon_drm.h>
 
+#include <asm/ps4.h>
+
 #include "radeon_drv.h"
 #include "radeon.h"
 #include "radeon_kms.h"
@@ -328,6 +330,14 @@ static int radeon_pci_probe(struct pci_dev *pdev,
 	ret = aperture_remove_conflicting_pci_devices(pdev, kms_driver.name);
 	if (ret)
 		return ret;
+
+	/*
+	 * On the PS4 (Liverpool) the HDMI output hangs off the Aeolia
+	 * southbridge; defer probe until the apcie driver is up. Off PS4
+	 * apcie_status() returns -ENODEV, so this never defers.
+	 */
+	if (x86_ps4_present() && apcie_status() == 0)
+		return -EPROBE_DEFER;
 
 	rdev = devm_drm_dev_alloc(dev, &kms_driver, typeof(*rdev), ddev);
 	if (IS_ERR(rdev))

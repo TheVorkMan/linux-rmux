@@ -1438,6 +1438,28 @@ static void radeon_dvi_force(struct drm_connector *connector)
 		radeon_connector->use_digital = true;
 }
 
+#ifdef CONFIG_X86_PS4
+int radeon_ps4_bridge_get_modes(struct drm_connector *connector);
+enum drm_connector_status radeon_ps4_bridge_detect(struct drm_connector *connector,
+						   bool force);
+int radeon_ps4_bridge_mode_valid(struct drm_connector *connector,
+				 struct drm_display_mode *mode);
+
+static const struct drm_connector_helper_funcs radeon_ps4_dp_connector_helper_funcs = {
+	.get_modes = radeon_ps4_bridge_get_modes,
+	.mode_valid = radeon_ps4_bridge_mode_valid,
+	.best_encoder = radeon_dvi_encoder,
+};
+
+static const struct drm_connector_funcs radeon_ps4_dp_connector_funcs = {
+	.dpms = drm_helper_connector_dpms,
+	.detect = radeon_ps4_bridge_detect,
+	.fill_modes = drm_helper_probe_single_connector_modes,
+	.destroy = radeon_connector_destroy,
+	.force = radeon_dvi_force,
+};
+#endif
+
 static enum drm_mode_status radeon_dvi_mode_valid(struct drm_connector *connector,
 				  const struct drm_display_mode *mode)
 {
@@ -1840,6 +1862,7 @@ radeon_add_atom_connector(struct drm_device *dev,
 	uint32_t subpixel_order = SubPixelNone;
 	bool shared_ddc = false;
 	bool is_dp_bridge = false;
+	bool __maybe_unused is_ps4_bridge = false;
 	bool has_aux = false;
 
 	if (connector_type == DRM_MODE_CONNECTOR_Unknown)
@@ -1890,6 +1913,18 @@ radeon_add_atom_connector(struct drm_device *dev,
 	radeon_connector = kzalloc_obj(struct radeon_connector);
 	if (!radeon_connector)
 		return;
+
+	/* Liverpool (PS4) exposes its DP->HDMI bridge as a fake HDMI port; */
+	/* only the DisplayPort connector is real and needs the ps4 bridge. */
+	if (rdev->family == CHIP_LIVERPOOL) {
+		if (connector_type == DRM_MODE_CONNECTOR_DisplayPort) {
+			connector_type = DRM_MODE_CONNECTOR_HDMIA;
+			is_dp_bridge = true;
+			is_ps4_bridge = true;
+		} else {
+			return;
+		}
+	}
 
 	connector = &radeon_connector->base;
 
@@ -1950,12 +1985,22 @@ radeon_add_atom_connector(struct drm_device *dev,
 		case DRM_MODE_CONNECTOR_HDMIA:
 		case DRM_MODE_CONNECTOR_HDMIB:
 		case DRM_MODE_CONNECTOR_DisplayPort:
-			drm_connector_init_with_ddc(dev, &radeon_connector->base,
-						    &radeon_dp_connector_funcs,
-						    connector_type,
-						    ddc);
-			drm_connector_helper_add(&radeon_connector->base,
-						 &radeon_dp_connector_helper_funcs);
+#ifdef CONFIG_X86_PS4
+			if (is_ps4_bridge) {
+				drm_connector_init(dev, &radeon_connector->base,
+						   &radeon_ps4_dp_connector_funcs, connector_type);
+				drm_connector_helper_add(&radeon_connector->base,
+							 &radeon_ps4_dp_connector_helper_funcs);
+			} else
+#endif
+			{
+				drm_connector_init_with_ddc(dev, &radeon_connector->base,
+							    &radeon_dp_connector_funcs,
+							    connector_type,
+							    ddc);
+				drm_connector_helper_add(&radeon_connector->base,
+							 &radeon_dp_connector_helper_funcs);
+			}
 			drm_object_attach_property(&radeon_connector->base.base,
 						      rdev->mode_info.underscan_property,
 						      UNDERSCAN_OFF);
