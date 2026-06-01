@@ -208,6 +208,9 @@ static const struct mmc_fixup __maybe_unused sdio_fixup_methods[] = {
 	SDIO_FIXUP(SDIO_VENDOR_ID_MARVELL, SDIO_DEVICE_ID_MARVELL_8887_F0,
 		   add_limit_rate_quirk, 150000000),
 
+	SDIO_FIXUP(SDIO_VENDOR_ID_MARVELL, SDIO_DEVICE_ID_MARVELL_8897_F0,
+		   add_limit_rate_quirk, 150000000),
+
 	END_FIXUP
 };
 
