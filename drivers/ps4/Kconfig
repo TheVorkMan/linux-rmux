@@ -39,3 +39,20 @@ config PS4_FAN
 	  be called ps4-fan.
 
 	  If unsure, say N.
+
+config PS4_LED
+	tristate "PlayStation 4 front-panel LED support"
+	depends on X86_PS4
+	depends on PS4_APCIE
+	depends on LEDS_CLASS
+	help
+	  Say Y here to enable control of the front-panel indicator LED on
+	  Sony PlayStation 4 consoles (Aeolia and Belize southbridges). The
+	  LED is driven through the Aeolia ICC mailbox and is exposed as a
+	  set of LED class devices under /sys/class/leds/ (ps4:blue:status,
+	  ps4:white:status, ps4:orange:status and several combined colors).
+
+	  This driver does nothing on non-PS4 hardware.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called ps4-led.
