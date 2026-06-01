@@ -269,6 +269,13 @@ enum csr_regs {
 	B0_Y2_SP_LISR	= 0x0028,
 	B0_Y2_SP_ICR	= 0x002c,
 
+	/* PS4 Aeolia (CXD90025G) family: separate interrupt control reg.
+	 * Write 2 = mask, 1 = rearm. The Yukon-2 ISRC2/LISR read-to-mask
+	 * side effect is absent on this hardware. Only ever written when
+	 * the bound device is a Sony southbridge GbE.
+	 */
+	AEOLIA_SP_ICR	= 0x0068,
+
 	B2_MAC_1	= 0x0100,
 	B2_MAC_2	= 0x0108,
 	B2_MAC_3	= 0x0110,
@@ -2288,6 +2295,7 @@ struct sky2_hw {
 #define SKY2_HW_VLAN_BROKEN     0x00000200
 #define SKY2_HW_RSS_CHKSUM	0x00000400	/* RSS requires chksum */
 #define SKY2_HW_IRQ_SETUP	0x00000800
+#define SKY2_HW_USE_AEOLIA_MSI	0x00001000
 
 	u8	     	     chip_id;
 	u8		     chip_rev;
@@ -2303,6 +2311,7 @@ struct sky2_hw {
 	struct work_struct   restart_work;
 	wait_queue_head_t    msi_wait;
 
+	u8		     phy_addr;
 	char		     irq_name[];
 };
 
