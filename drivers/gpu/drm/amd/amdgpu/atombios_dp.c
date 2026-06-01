@@ -258,12 +258,20 @@ static int amdgpu_atombios_dp_get_dp_link_config(struct drm_connector *connector
 		amdgpu_atombios_dp_convert_bpc_to_bpp(amdgpu_connector_get_monitor_bpc(connector));
 	static const unsigned link_rates[3] = { 162000, 270000, 540000 };
 	unsigned max_link_rate = drm_dp_max_link_rate(dpcd);
+	unsigned min_lane_num = 1;
 	unsigned max_lane_num = drm_dp_max_lane_count(dpcd);
 	unsigned lane_num, i, max_pix_clock;
+	struct amdgpu_connector *amdgpu_connector = to_amdgpu_connector(connector);
+	struct drm_device *dev = amdgpu_connector->base.dev;
+	struct amdgpu_device *adev = drm_to_adev(dev);
+
+	/* Liverpool is always connected to an encoder that needs 4 lanes */
+	if ((adev->asic_type == CHIP_LIVERPOOL) || (adev->asic_type == CHIP_GLADIUS))
+		min_lane_num = 4;
 
 	if (amdgpu_connector_encoder_get_dp_bridge_encoder_id(connector) ==
 	    ENCODER_OBJECT_ID_NUTMEG) {
-		for (lane_num = 1; lane_num <= max_lane_num; lane_num <<= 1) {
+		for (lane_num = min_lane_num; lane_num <= max_lane_num; lane_num <<= 1) {
 			max_pix_clock = (lane_num * 270000 * 8) / bpp;
 			if (max_pix_clock >= pix_clock) {
 				*dp_lanes = lane_num;
@@ -408,6 +416,8 @@ int amdgpu_atombios_dp_get_panel_mode(struct drm_encoder *encoder,
 void amdgpu_atombios_dp_set_link_config(struct drm_connector *connector,
 				 const struct drm_display_mode *mode)
 {
+	struct drm_device *dev = connector->dev;
+	struct amdgpu_device *adev = drm_to_adev(dev);
 	struct amdgpu_connector *amdgpu_connector = to_amdgpu_connector(connector);
 	struct amdgpu_connector_atom_dig *dig_connector;
 	int ret;
@@ -426,6 +436,11 @@ void amdgpu_atombios_dp_set_link_config(struct drm_connector *connector,
 			dig_connector->dp_clock = 0;
 			dig_connector->dp_lane_count = 0;
 		}
+		if (adev->asic_type == CHIP_LIVERPOOL ||
+		    adev->asic_type == CHIP_GLADIUS)
+			DRM_DEBUG_KMS("ps4 dp link config: ret=%d mode_clock=%d lanes=%u clock=%u sink_type=%d\n",
+				      ret, mode->clock, dig_connector->dp_lane_count,
+				      dig_connector->dp_clock, dig_connector->dp_sink_type);
 	}
 }
 
