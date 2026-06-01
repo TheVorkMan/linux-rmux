@@ -155,8 +155,20 @@ static const struct vm_operations_struct amdgpu_gem_vm_ops = {
 static void amdgpu_gem_object_free(struct drm_gem_object *gobj)
 {
 	struct amdgpu_bo *aobj = gem_to_amdgpu_bo(gobj);
+	struct amdgpu_device *adev = amdgpu_ttm_adev(aobj->tbo.bdev);
 
 	amdgpu_hmm_unregister(aobj);
+
+	if ((adev->asic_type == CHIP_LIVERPOOL ||
+	     adev->asic_type == CHIP_GLADIUS) &&
+	    aobj->tbo.pin_count > 0) {
+		if (amdgpu_bo_reserve(aobj, false) == 0) {
+			while (aobj->tbo.pin_count > 0)
+				amdgpu_bo_unpin(aobj);
+			amdgpu_bo_unreserve(aobj);
+		}
+	}
+
 	ttm_bo_fini(&aobj->tbo);
 }
 
