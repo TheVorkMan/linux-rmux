@@ -18,3 +18,24 @@ config PS4_APCIE
 	  This is the foundation for all other PS4 platform drivers; if you
 	  are building a kernel for the PlayStation 4, say Y. If unsure,
 	  say N.
+
+config PS4_FAN
+	tristate "PlayStation 4 Aeolia/Belize fan hwmon driver"
+	depends on X86_PS4
+	depends on PS4_APCIE
+	depends on HWMON
+	help
+	  hwmon driver for the fan controller on the Sony PlayStation 4
+	  Aeolia (CXD90025G) and Belize southbridges. It talks to the
+	  southbridge EMC over the Aeolia ICC mailbox and exposes the APU
+	  temperature (temp1_input), the fan trip threshold (temp1_crit,
+	  read/write, in milli-Celsius), and the fan speed (fan1_input, in
+	  RPM) through the standard hwmon sysfs interface, so tools such as
+	  lm-sensors and fancontrol work out of the box.
+
+	  This driver requires the PS4 Aeolia APCIE/ICC support.
+
+	  To compile this driver as a module, choose M here: the module will
+	  be called ps4-fan.
+
+	  If unsure, say N.

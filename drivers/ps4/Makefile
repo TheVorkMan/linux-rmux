@@ -7,3 +7,4 @@ obj-$(CONFIG_PS4_APCIE)		+= ps4-apcie-icc.o
 obj-$(CONFIG_PS4_APCIE)		+= ps4-apcie-uart.o
 obj-$(CONFIG_PS4_APCIE)		+= ps4-apcie-pwrbutton.o
 obj-$(CONFIG_PS4_APCIE)		+= icc/i2c.o
+obj-$(CONFIG_PS4_FAN) += ps4-fan.o
