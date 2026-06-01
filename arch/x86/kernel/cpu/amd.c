@@ -24,6 +24,7 @@
 #include <asm/resctrl.h>
 #include <asm/msr.h>
 #include <asm/sev.h>
+#include <asm/ps4.h>
 
 #ifdef CONFIG_X86_64
 # include <asm/mmconfig.h>
@@ -847,6 +848,14 @@ static void init_amd_jg(struct cpuinfo_x86 *c)
 	 * instruction support via CPUID.
 	 */
 	clear_rdrand_cpuid_bit(c);
+
+	/*
+	 * Family 16h Jaguar parts used in semi-custom designs report an
+	 * OPN string via CPUID rather than a human-readable model name.
+	 * Fix up the model ID for /proc/cpuinfo and userspace tooling.
+	 */
+	if (x86_ps4_present() && c->x86_model <= 0x30)
+		strscpy(c->x86_model_id, "AMD Jaguar");
 }
 
 static void init_amd_bd(struct cpuinfo_x86 *c)
