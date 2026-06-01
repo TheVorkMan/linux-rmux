@@ -247,6 +247,7 @@ enum {
 	AHCI_HFLAG_43BIT_ONLY		= BIT(27), /* 43bit DMA addr limit */
 	AHCI_HFLAG_INTEL_PCS_QUIRK	= BIT(28), /* apply Intel PCS quirk */
 	AHCI_HFLAG_ATAPI_DMA_QUIRK	= BIT(29), /* force ATAPI to use DMA */
+	AHCI_HFLAG_31BIT_ONLY		= BIT(30), /* 31bit DMA addr limit */
 
 	/* ap->flags bits */
 
@@ -469,5 +470,30 @@ static inline int ahci_nr_ports(u32 cap)
 {
 	return (cap & 0x1f) + 1;
 }
+
+#ifdef CONFIG_X86_PS4
+struct f_resource{
+	u64 resource_i_ptr;
+	u64 r_bustag;
+	void __iomem * r_bushandle;
+};
+
+struct ahci_controller{
+	void *dev;
+	int dev_id;
+	struct f_resource *r_mem;
+	u32 trace_len;
+};
+
+void bpcie_sata_phy_init(struct device *dev, struct ahci_controller *ctlr);
+
+static inline void bpcie_ahci_write(struct f_resource *r_mem, u32 offset, u32 val) {
+	iowrite32(val, r_mem->r_bushandle + offset);
+}
+
+static inline u32 bpcie_ahci_read(struct f_resource *r_mem, u32 offset) {
+	return ioread32(r_mem->r_bushandle + offset);
+}
+#endif
 
 #endif /* _AHCI_H */
