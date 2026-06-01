@@ -67,6 +67,7 @@
 #include <asm/apic.h>
 #include <asm/pgtable.h>
 #include <asm/x86_init.h>
+#include <asm/ps4.h>
 
 #define	for_each_ioapic(idx)		\
 	for ((idx) = 0; (idx) < nr_ioapics; (idx)++)
@@ -2358,6 +2359,17 @@ static int io_apic_get_redir_entries(int ioapic)
 unsigned int arch_dynirq_lower_bound(unsigned int from)
 {
 	unsigned int ret;
+
+	/*
+	 * The PS4 Aeolia IO-APIC is registered late; until it is up, dynamic
+	 * IRQs must start at gsi_top, after which ioapic_dynirq_base is the
+	 * lower bound. Gated on PS4 so other x86 machines keep the logic below.
+	 */
+	if (x86_ps4_present()) {
+		if (!ioapic_initialized)
+			return gsi_top;
+		return ioapic_dynirq_base ? : from;
+	}
 
 	/*
 	 * dmar_alloc_hwirq() may be called before setup_IO_APIC(), so use
