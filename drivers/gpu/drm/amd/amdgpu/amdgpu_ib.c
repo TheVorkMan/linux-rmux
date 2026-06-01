@@ -409,7 +409,7 @@ int amdgpu_ib_ring_tests(struct amdgpu_device *adev)
 {
 	long tmo_gfx, tmo_mm;
 	int r, ret = 0;
-	unsigned int i;
+	unsigned int i, num_rings;
 
 	tmo_mm = tmo_gfx = AMDGPU_IB_TEST_TIMEOUT;
 	if (amdgpu_sriov_vf(adev)) {
@@ -432,7 +432,9 @@ int amdgpu_ib_ring_tests(struct amdgpu_device *adev)
 		tmo_gfx = AMDGPU_IB_TEST_GFX_XGMI_TIMEOUT;
 	}
 
-	for (i = 0; i < adev->num_rings; ++i) {
+	num_rings = (adev->asic_type == CHIP_LIVERPOOL ||
+		     adev->asic_type == CHIP_GLADIUS) ? 1 : adev->num_rings;
+	for (i = 0; i < num_rings; ++i) {
 		struct amdgpu_ring *ring = adev->rings[i];
 		long tmo;
 
