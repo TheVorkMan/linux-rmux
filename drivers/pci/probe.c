@@ -24,6 +24,7 @@
 #include <linux/pm_runtime.h>
 #include <linux/bitfield.h>
 #include <trace/events/pci.h>
+#include <asm/ps4.h>
 #include "pci.h"
 
 static struct resource busn_resource = {
@@ -2864,15 +2865,30 @@ static int only_one_child(struct pci_bus *bus)
  *
  * Returns the number of new devices found.
  */
+#define AEOLIA_SLOT_NUM 20
 int pci_scan_slot(struct pci_bus *bus, int devfn)
 {
-	struct pci_dev *dev;
+	struct pci_dev *dev = NULL;
 	int fn = 0, nr = 0;
+	u32 l;
 
 	if (only_one_child(bus) && (devfn > 0))
 		return 0; /* Already scanned the entire slot */
 
+	/* Skip phantom Aeolia functions that bleed through PCI config space. */
+	if (x86_ps4_present() && PCI_SLOT(devfn) != AEOLIA_SLOT_NUM &&
+	    pci_bus_read_dev_vendor_id(bus, devfn, &l, 60 * 1000) &&
+	    (l & 0xffff) == PCI_VENDOR_ID_SONY)
+		return 0;
+
 	do {
+		if (x86_ps4_present() && PCI_SLOT(devfn) != AEOLIA_SLOT_NUM &&
+		    pci_bus_read_dev_vendor_id(bus, devfn + fn, &l, 60 * 1000) &&
+		    (l & 0xffff) == PCI_VENDOR_ID_SONY) {
+			fn = next_fn(bus, dev, fn);
+			continue;
+		}
+
 		dev = pci_scan_single_device(bus, devfn + fn);
 		if (dev) {
 			if (!pci_dev_is_added(dev))
