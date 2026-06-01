@@ -240,6 +240,7 @@ source "drivers/opp/Kconfig"
 source "drivers/siox/Kconfig"
 
 source "drivers/slimbus/Kconfig"
+source "drivers/ps4/Kconfig"
 
 source "drivers/interconnect/Kconfig"
 

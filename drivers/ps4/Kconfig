@@ -1,0 +1,20 @@
+# SPDX-License-Identifier: GPL-2.0-only
+#
+# Sony PlayStation 4 platform drivers
+#
+
+config PS4_APCIE
+	bool "PS4 Aeolia/Belize south bridge PCIe core"
+	depends on X86_PS4
+	default X86_PS4
+	help
+	  Core driver for the Sony PlayStation 4 "Aeolia" (and later
+	  "Belize"/"Baikal") south bridge. It binds PCI function 4 of the
+	  composite southbridge device, programs its per-function BAR
+	  windows and the custom shared-MSI routing block, and builds the
+	  composite MSI irq domain used by every other PS4 on-chip function
+	  driver (GbE, AHCI, SDHCI, xHCI, ICC, ...).
+
+	  This is the foundation for all other PS4 platform drivers; if you
+	  are building a kernel for the PlayStation 4, say Y. If unsure,
+	  say N.
