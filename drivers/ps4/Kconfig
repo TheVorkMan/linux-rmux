@@ -56,3 +56,18 @@ config PS4_LED
 
 	  To compile this driver as a module, choose M here: the module will
 	  be called ps4-led.
+
+config PS4_BUZZER
+	bool "PlayStation 4 front-panel buzzer"
+	depends on X86_PS4
+	depends on PS4_APCIE
+	help
+	  Driver for the PlayStation 4 (Aeolia/Belize) front-panel piezo
+	  buzzer. It registers a "ps4-buzzer" platform device and exposes a
+	  write-only sysfs attribute at
+	  /sys/devices/platform/ps4-buzzer/beep; writing "1" triggers a beep.
+
+	  The buzzer is driven over the EMC indicator ICC channel and so
+	  requires the PS4 APCIE/ICC support (the ps4 southbridge driver).
+
+	  If unsure, say N.
