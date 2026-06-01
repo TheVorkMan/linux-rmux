@@ -30,6 +30,7 @@
 #include <asm/irq_remapping.h>
 #include <asm/set_memory.h>
 #include <asm/sev.h>
+#include <asm/ps4.h>
 
 #include <linux/crash_dump.h>
 
@@ -3269,7 +3270,12 @@ static int __init early_amd_iommu_init(void)
 	if (!is_kdump_kernel() || amd_iommu_disabled)
 		disable_iommus();
 
-	if (amd_iommu_irq_remap)
+	/*
+	 * The PS4 Aeolia south bridge does not describe its IOAPIC in the
+	 * IVRS tables, so check_ioapic_information() fails there.  Skip the
+	 * check on PS4 only; every other AMD system still validates it.
+	 */
+	if (!x86_ps4_present() && amd_iommu_irq_remap)
 		amd_iommu_irq_remap = check_ioapic_information();
 
 	if (amd_iommu_irq_remap) {
