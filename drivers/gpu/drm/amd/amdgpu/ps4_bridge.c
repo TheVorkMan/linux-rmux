@@ -518,6 +518,19 @@ static void ps4_bridge_pre_enable(struct drm_bridge *bridge)
 	mutex_unlock(&mn_bridge->mutex);
 }
 
+static void ps4_bridge_reset_mn864729(struct ps4_bridge *mn_bridge)
+{
+	mutex_lock(&mn_bridge->mutex);
+	cq_init(&mn_bridge->cq, 4);
+	cq_writereg(&mn_bridge->cq, TSRST,
+		   TSRST_AVCSRST | TSRST_ENCSRST | TSRST_FIFOSRST |
+		   TSRST_CCSRST | TSRST_HDCPSRST | TSRST_AUDSRST |
+		   TSRST_VIFSRST);
+	if (cq_exec(&mn_bridge->cq) < 0)
+		DRM_ERROR("Failed to reset bridge between Belize attempts\n");
+	mutex_unlock(&mn_bridge->mutex);
+}
+
 static int ps4_bridge_enable_mn864729_video(struct ps4_bridge *mn_bridge,
 					    struct pci_dev *pdev)
 {
@@ -827,8 +840,10 @@ static void ps4_bridge_enable(struct drm_bridge *bridge)
 				break;
 			}
 
-			if (attempt < PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS)
+			if (attempt < PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS) {
+				ps4_bridge_reset_mn864729(mn_bridge);
 				msleep(PS4_BRIDGE_BELIZE_RETRY_DELAY_MS);
+			}
 		}
 
 		if (success)
