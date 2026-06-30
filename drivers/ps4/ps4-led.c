@@ -182,7 +182,14 @@ static int ps4_led_set_blocking(struct led_classdev *led_cdev,
 			    reply, sizeof(reply));
 	if (ret < 0) {
 		mutex_unlock(&ps4_led_lock);
+		dev_err(led_cdev->dev, "icc: LED command failed: %d\n", ret);
 		return ret;
+	}
+	if (reply[0] != 0 || reply[1] != 0) {
+		mutex_unlock(&ps4_led_lock);
+		dev_err(led_cdev->dev, "icc: LED command reported failure: %d, %d\n",
+			reply[0], reply[1]);
+		return -EIO;
 	}
 
 	ps4_led_current_payload = data;
