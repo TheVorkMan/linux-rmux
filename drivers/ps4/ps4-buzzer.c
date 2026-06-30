@@ -33,7 +33,12 @@ static int ps4_buzzer_send(u8 value)
 			    reply, sizeof(reply));
 	mutex_unlock(&ps4_buzzer_lock);
 
-	return ret;
+	if (ret < 0)
+		return ret;
+	if (reply[0] != 0 || reply[1] != 0)
+		return -EIO;
+
+	return 0;
 }
 
 static ssize_t beep_store(struct device *dev, struct device_attribute *attr,
