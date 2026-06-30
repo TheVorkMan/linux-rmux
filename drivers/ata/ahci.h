@@ -361,6 +361,9 @@ struct ahci_host_priv {
 	unsigned		nports;		/* Number of ports */
 	void			*plat_data;	/* Other platform data */
 	unsigned int		irq;		/* interrupt line */
+#ifdef CONFIG_X86_PS4
+	int			ps4_nvec;	/* IRQs granted by apcie_assign_irqs */
+#endif
 	/*
 	 * Optional ahci_start_engine override, if not set this gets set to the
 	 * default ahci_start_engine during ahci_save_initial_config, this can
