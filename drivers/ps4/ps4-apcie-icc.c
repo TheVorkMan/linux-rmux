@@ -329,6 +329,11 @@ __maybe_unused void resetUsbPort(void)
 		pr_err("icc: USB disable failed: %d\n", ret);
 		return;
 	}
+	if (resp[0] != 0 || resp[1] != 0) {
+		pr_err("icc: USB disable reported failure: %d, %d\n",
+			resp[0], resp[1]);
+		return;
+	}
 	pr_debug("icc: USB disable ret=%d, reply %02x %02x %02x %02x\n",
 		 ret, resp[0], resp[1], resp[2], resp[3]);
 
@@ -336,6 +341,11 @@ __maybe_unused void resetUsbPort(void)
 	ret = apcie_icc_cmd(5, 0x10, &on, sizeof(on), resp, 20);
 	if (ret < 0) {
 		pr_err("icc: USB enable failed: %d\n", ret);
+		return;
+	}
+	if (resp[0] != 0 || resp[1] != 0) {
+		pr_err("icc: USB enable reported failure: %d, %d\n",
+			resp[0], resp[1]);
 		return;
 	}
 	pr_debug("icc: USB enable ret=%d, reply %02x %02x %02x %02x\n",
@@ -370,6 +380,11 @@ void resetBtWlan(void)
 	ret = apcie_icc_cmd(5, 0, &on, sizeof(on), resp, 20);
 	if (ret < 0) {
 		pr_err("icc: BT/WLAN enable failed: %d\n", ret);
+		return;
+	}
+	if (resp[0] != 0 || resp[1] != 0) {
+		pr_err("icc: BT/WLAN enable reported failure: %d, %d\n",
+			resp[0], resp[1]);
 		return;
 	}
 	pr_debug("icc: BT/WLAN enable ret=%d, reply %02x %02x %02x %02x\n",
