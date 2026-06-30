@@ -67,9 +67,11 @@ static __init unsigned long ps4_measure_tsc_freq(void)
 
 	// reset/start the timer
 	emctimer_write32(0x84, emctimer_read32(0x84) & (~0x01));
-	// udelay is not calibrated yet, so this is likely wildly off, but good
-	// enough to work.
-	udelay(300);
+	{
+		u64 reset_deadline = rdtsc() + (PS4_PRO_TSC_FREQ / 1000000) * 300;
+		while (rdtsc() < reset_deadline)
+			cpu_relax();
+	}
 	emctimer_write32(0x00, emctimer_read32(0x00) | 0x01);
 	emctimer_write32(0x84, emctimer_read32(0x84) | 0x01);
 
