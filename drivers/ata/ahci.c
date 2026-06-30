@@ -1764,6 +1764,7 @@ static int ahci_init_irq(struct pci_dev *pdev, unsigned int n_ports,
 		nvec = apcie_assign_irqs(pdev, n_ports);
 		if (nvec < 0)
 			return nvec;
+		hpriv->ps4_nvec = nvec;
 		return 0;
 	}
 	#endif
@@ -2197,6 +2198,17 @@ static void ahci_shutdown_one(struct pci_dev *pdev)
 
 static void ahci_remove_one(struct pci_dev *pdev)
 {
+	#ifdef CONFIG_X86_PS4
+	int ps4_nvec = 0;
+
+	if (pdev->vendor == PCI_VENDOR_ID_SONY) {
+		struct ata_host *host = pci_get_drvdata(pdev);
+		struct ahci_host_priv *hpriv = host->private_data;
+
+		ps4_nvec = hpriv->ps4_nvec;
+	}
+	#endif
+
 	sysfs_remove_file_from_group(&pdev->dev.kobj,
 				     &dev_attr_remapped_nvme.attr,
 				     NULL);
@@ -2204,8 +2216,8 @@ static void ahci_remove_one(struct pci_dev *pdev)
 	ata_pci_remove_one(pdev);
 
 	#ifdef CONFIG_X86_PS4
-	if (pdev->vendor == PCI_VENDOR_ID_SONY) {
-		apcie_free_irqs(pdev->irq, 1);
+	if (pdev->vendor == PCI_VENDOR_ID_SONY && ps4_nvec > 0) {
+		apcie_free_irqs(pdev->irq, ps4_nvec);
 	}
 	#endif
 }
