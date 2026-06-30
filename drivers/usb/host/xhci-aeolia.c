@@ -518,6 +518,8 @@ static int xhci_aeolia_suspend(struct device *dev)
 
 resume:
 	while (idx--) {
+		if (pdev->device != PCI_DEVICE_ID_SONY_AEOLIA_XHCI && idx == 1)
+			continue;
 		xhci = hcd_to_xhci(axhci->hcd[idx]);
 		xhci_resume(xhci, false, false);
 	}
