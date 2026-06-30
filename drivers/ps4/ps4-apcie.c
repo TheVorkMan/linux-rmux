@@ -593,6 +593,7 @@ static int apcie_probe(struct pci_dev *dev, const struct pci_device_id *id) {
 	}
 	sc->pdev = dev;
 	memset(sc->irq_map, -1, sizeof(sc->irq_map));
+	memset(sc->serial_line, -1, sizeof(sc->serial_line));
 	pci_set_drvdata(dev, sc);
 
 	// eMMC ... unused?
