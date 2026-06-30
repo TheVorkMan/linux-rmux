@@ -350,6 +350,13 @@ static int aeolia_probe_slot(struct sdhci_pci_slot *slot)
 		return -ENODEV;
 	}
 	slot->host->irq = slot->chip->pdev->irq;
+
+	if ((slot->chip->pdev->device == PCI_DEVICE_ID_SONY_AEOLIA_SDHCI) ||
+	    (slot->chip->pdev->device == PCI_DEVICE_ID_SONY_BELIZE_SDHCI) ||
+	    (slot->chip->pdev->device == PCI_DEVICE_ID_SONY_BAIKAL_SDHCI)) {
+		slot->host->quirks2 |= SDHCI_QUIRK2_PRESET_VALUE_BROKEN;
+	}
+
 	return 0;
 }
 
@@ -2007,8 +2014,7 @@ static const struct pci_device_id pci_ids[] = {
 	#ifdef CONFIG_X86_PS4
 	SDHCI_PCI_DEVICE(SONY, AEOLIA_SDHCI, aeolia),
 	SDHCI_PCI_DEVICE(SONY, BELIZE_SDHCI, aeolia),
-	// TODO (ps4patches): What is this doing in comments?
-	//SDHCI_PCI_DEVICE(SONY, BAIKAL_SDHCI, aeolia),
+	SDHCI_PCI_DEVICE(SONY, BAIKAL_SDHCI, aeolia),
 	#endif
 	SDHCI_PCI_DEVICE(GLI, 9750, gl9750),
 	SDHCI_PCI_DEVICE(GLI, 9755, gl9755),
