@@ -137,6 +137,14 @@ static const u8 led_pink_blue[] = {
 	0x05, 0x01, 0x00
 };
 
+static const u8 led_purple[] = {
+	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0xff,
+	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x00, 0x02,
+	0x01, 0x00, 0x02, 0x03, 0x01, 0x00, 0x04, 0x01,
+	0xbf, 0x02, 0x80, 0x05, 0x01, 0xff, 0x02, 0x00,
+	0x05, 0x01, 0xff
+};
+
 /* ============================================================
  * struct ps4_led_node - LED class device and manual payload pair
  * @cdev: LED class device exposed to userspace.
@@ -295,6 +303,14 @@ static struct ps4_led_node ps4_led_nodes[] = {
 		},
 		.payload = led_pink_blue,
 	},
+	{
+		.cdev = {
+			.name = "ps4:purple:status",
+			.max_brightness = 255,
+			.brightness_set_blocking = ps4_led_set_blocking,
+		},
+		.payload = led_purple,
+	},
 };
 
 /* ============================================================
@@ -302,6 +318,7 @@ static struct ps4_led_node ps4_led_nodes[] = {
  * ============================================================ */
 static int ps4_led_probe(struct platform_device *pdev)
 {
+	u8 reply[0x30];
 	int i, ret;
 
 	for (i = 0; i < ARRAY_SIZE(ps4_led_nodes); i++) {
@@ -315,7 +332,18 @@ static int ps4_led_probe(struct platform_device *pdev)
 		}
 	}
 
-	dev_info(&pdev->dev, "PS4 LED driver ready.\n");
+	memset(reply, 0, sizeof(reply));
+	ret = apcie_icc_cmd(PS4_LED_ICC_MAJOR, PS4_LED_ICC_MINOR,
+			    led_purple, PS4_LED_PAYLOAD_LEN,
+			    reply, sizeof(reply));
+	if (ret < 0 || reply[0] != 0 || reply[1] != 0)
+		dev_warn(&pdev->dev, "boot LED set failed: ret=%d reply=[%02x %02x]\n",
+			 ret, reply[0], reply[1]);
+	else
+		ps4_led_current_payload = led_purple;
+
+	dev_info(&pdev->dev, "PS4 LED driver ready: %zu colors, boot color: purple\n",
+		 ARRAY_SIZE(ps4_led_nodes));
 
 	return 0;
 }
