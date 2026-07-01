@@ -4,6 +4,7 @@
 #include <linux/kernel.h>
 #include <linux/pci.h>
 #include <linux/pci_ids.h>
+#include <linux/mmc/sdio_func.h>
 #include "ps4-hwinfo.h"
 
 #define AMD_VENDOR 0x1002
@@ -36,11 +37,13 @@ static void stepping_str(u8 rev, char *buf)
 
 void ps4_hwinfo_print(void)
 {
-	struct pci_dev *gpu = NULL;
-	struct pci_dev *sb  = NULL;
+	struct pci_dev *gpu  = NULL;
+	struct pci_dev *sb   = NULL;
+	struct pci_dev *wlan = NULL;
 	const char *gpu_name = "unknown";
 	const char *sb_name  = "unknown";
-	u16 gpu_dev = 0, sb_dev = 0;
+	u16 gpu_dev = 0, sb_dev = 0, wlan_dev = 0;
+	u16 wlan_ven = 0;
 	u8 sb_rev = 0;
 	char stepping[3];
 	int i;
@@ -66,8 +69,38 @@ void ps4_hwinfo_print(void)
 		}
 	}
 
+	wlan = pci_get_device(PCI_VENDOR_ID_MEDIATEK, 0x7668, NULL);
+	if (wlan) {
+		wlan_ven = wlan->vendor;
+		wlan_dev = wlan->device;
+		pci_dev_put(wlan);
+	}
+
 	stepping_str(sb_rev, stepping);
-	pr_info("GPU: %s [%04x:%04x]  southbridge: %s %s [%04x:%04x]\n",
-		gpu_name, AMD_VENDOR, gpu_dev,
-		sb_name, stepping, PCI_VENDOR_ID_SONY, sb_dev);
+	if (wlan_dev)
+		pr_info("GPU: %s [%04x:%04x]  southbridge: %s %s [%04x:%04x]  WLAN: [%04x:%04x]\n",
+			gpu_name, AMD_VENDOR, gpu_dev,
+			sb_name, stepping, PCI_VENDOR_ID_SONY, sb_dev,
+			wlan_ven, wlan_dev);
+	else
+		pr_info("GPU: %s [%04x:%04x]  southbridge: %s %s [%04x:%04x]\n",
+			gpu_name, AMD_VENDOR, gpu_dev,
+			sb_name, stepping, PCI_VENDOR_ID_SONY, sb_dev);
 }
+
+static int ps4_hwinfo_sdio_iter(struct device *dev, void *data)
+{
+	struct sdio_func *func = to_sdio_func(dev);
+
+	if (func->num == 1)
+		pr_info("WLAN: [%04x:%04x] via SDIO\n", func->vendor, func->device);
+
+	return 0;
+}
+
+static int __init ps4_hwinfo_wlan_late(void)
+{
+	bus_for_each_dev(&sdio_bus_type, NULL, NULL, ps4_hwinfo_sdio_iter);
+	return 0;
+}
+late_initcall(ps4_hwinfo_wlan_late);
