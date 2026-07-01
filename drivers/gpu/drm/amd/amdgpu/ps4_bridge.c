@@ -1005,7 +1005,7 @@ int ps4_bridge_get_modes(struct drm_connector *connector)
 
 	DRM_DEBUG_KMS("ps4_bridge_get_modes\n");
 
-	kfree(amdgpu_connector->edid);
+	drm_edid_free(amdgpu_connector->edid);
 	amdgpu_connector->edid = NULL;
 	drm_connector_update_edid_property(connector, NULL);
 
@@ -1117,7 +1117,7 @@ int ps4_bridge_get_modes(struct drm_connector *connector)
 edid_ready:
 	if (drm_edid) {
 		raw_edid = drm_edid_raw(drm_edid);
-		amdgpu_connector->edid = drm_edid_duplicate(raw_edid);
+		amdgpu_connector->edid = drm_edid_dup(drm_edid);
 		drm_edid_connector_update(connector, drm_edid);
 		count = drm_edid_connector_add_modes(connector);
 		newmode = drm_mode_duplicate(dev, &mode_1080p);
