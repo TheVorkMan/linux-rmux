@@ -90,7 +90,7 @@ void ps4_hwinfo_print(void)
 
 static int ps4_hwinfo_sdio_iter(struct device *dev, void *data)
 {
-	struct sdio_func *func = to_sdio_func(dev);
+	struct sdio_func *func = dev_to_sdio_func(dev);
 
 	if (func->num == 1)
 		pr_info("WLAN: [%04x:%04x] via SDIO\n", func->vendor, func->device);
