@@ -15,6 +15,7 @@
 #include <asm/ps4.h>
 
 #include "aeolia.h"
+#include "ps4-hwinfo.h"
 
 
 #define     MSI_DATA_VECTOR_SHIFT	0
@@ -360,6 +361,28 @@ static struct irq_domain *apcie_create_irq_domain(struct apcie_dev *sc)
 	return domain;
 }
 
+static const char *apcie_sb_name(u16 device)
+{
+	switch (device) {
+	case PCI_DEVICE_ID_SONY_AEOLIA_PCIE: return "Aeolia";
+	case PCI_DEVICE_ID_SONY_BELIZE_PCIE: return "Belize";
+	case PCI_DEVICE_ID_SONY_BAIKAL_PCIE: return "Baikal";
+	default: return "unknown";
+	}
+}
+
+
+static const char * const apcie_func_names[AEOLIA_NUM_FUNCS] = {
+	[AEOLIA_FUNC_ID_ACPI]  = "ACPI/wakeup",
+	[AEOLIA_FUNC_ID_GBE]   = "GbE",
+	[AEOLIA_FUNC_ID_AHCI]  = "AHCI",
+	[AEOLIA_FUNC_ID_SDHCI] = "SDHCI/eMMC",
+	[AEOLIA_FUNC_ID_PCIE]  = "PCIe/MSI-glue",
+	[AEOLIA_FUNC_ID_DMAC]  = "DMAC",
+	[AEOLIA_FUNC_ID_MEM]   = "MEM",
+	[AEOLIA_FUNC_ID_XHCI]  = "xHCI/SATA",
+};
+
 static int apcie_is_compatible_device(struct pci_dev *dev)
 {
 	if (!dev || dev->vendor != PCI_VENDOR_ID_SONY) {
@@ -458,7 +481,7 @@ static int apcie_glue_init(struct apcie_dev *sc)
 {
 	int i;
 
-	sc_info("apcie glue probe\n");
+	sc_info("apcie glue init\n");
 
 	if (!request_mem_region(pci_resource_start(sc->pdev, 4) +
 				APCIE_RGN_PCIE_BASE, APCIE_RGN_PCIE_SIZE,
@@ -479,7 +502,7 @@ static int apcie_glue_init(struct apcie_dev *sc)
 
 	glue_set_region(sc, AEOLIA_FUNC_ID_PCIE, 2, 0xbf018000, 0x7fff);
 
-	sc_info("Aeolia chip revision: %08x:%08x:%08x\n",
+	sc_info("chip-id: %08x %08x  rev: %08x\n",
 		ioread32(sc->bar2 + APCIE_REG_CHIPID_0),
 		ioread32(sc->bar2 + APCIE_REG_CHIPID_1),
 		ioread32(sc->bar2 + APCIE_REG_CHIPREV));
@@ -574,9 +597,21 @@ extern bool apcie_initialized;
 
 static int apcie_probe(struct pci_dev *dev, const struct pci_device_id *id) {
 	struct apcie_dev *sc;
-	int ret;
+	int ret, i;
 
-	dev_dbg(&dev->dev, "apcie_probe()\n");
+	ps4_hwinfo_print();
+	dev_info(&dev->dev, "southbridge: %s\n", apcie_sb_name(dev->device));
+
+	for (i = 0; i < AEOLIA_NUM_FUNCS; i++) {
+		unsigned int devfn = (dev->devfn & ~7) | i;
+		struct pci_dev *fn = pci_get_slot(dev->bus, devfn);
+		if (fn) {
+			dev_info(&dev->dev, "  fn%d [%04x:%04x] %s\n",
+				 i, fn->vendor, fn->device,
+				 apcie_func_names[i]);
+			pci_dev_put(fn);
+		}
+	}
 
 	ret = pci_enable_device(dev);
 	if (ret) {
