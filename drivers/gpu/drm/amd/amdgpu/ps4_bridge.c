@@ -130,8 +130,9 @@
 #define PCI_DEVICE_ID_CUH_2XXX 0x9923
 #define PCI_DEVICE_ID_CUH_7XXX 0x9924
 
-#define PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS 3
-#define PS4_BRIDGE_BELIZE_RETRY_DELAY_MS 120
+#define PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS 5
+#define PS4_BRIDGE_BELIZE_RETRY_DELAY_MS 200
+#define PS4_BRIDGE_DPCD_READY_TIMEOUT_MS 3000
 
 struct edid *drm_get_edid(struct drm_connector *connector,
  				 struct i2c_adapter *adapter);
@@ -171,6 +172,9 @@ struct ps4_bridge {
 	int mode;
 	bool enabled;
 	bool enabling;
+
+	void *cached_edid;
+	size_t cached_edid_size;
 };
 
 /* this should really be taken care of by the connector, but that is currently
@@ -518,6 +522,39 @@ static void ps4_bridge_pre_enable(struct drm_bridge *bridge)
 	mutex_unlock(&mn_bridge->mutex);
 }
 
+static int ps4_bridge_wait_dpcd_ready(struct ps4_bridge *mn_bridge,
+				      unsigned long timeout_ms)
+{
+	struct drm_connector *connector = mn_bridge->connector;
+	struct amdgpu_connector *amdgpu_connector;
+	struct amdgpu_connector_atom_dig *dig_connector;
+	unsigned long deadline;
+	int ret;
+
+	if (!connector)
+		return -ENODEV;
+
+	amdgpu_connector = to_amdgpu_connector(connector);
+	if (!amdgpu_connector->ddc_bus ||
+	    !amdgpu_connector->ddc_bus->has_aux)
+		return 0;
+
+	dig_connector = amdgpu_connector->con_priv;
+	if (dig_connector)
+		dig_connector->dp_sink_type = CONNECTOR_OBJECT_ID_DISPLAYPORT;
+
+	deadline = jiffies + msecs_to_jiffies(timeout_ms);
+	do {
+		ret = amdgpu_atombios_dp_get_dpcd(amdgpu_connector);
+		if (ret == 0)
+			return 0;
+		msleep(20);
+	} while (time_before(jiffies, deadline));
+
+	DRM_WARN("ps4_bridge: DPCD not ready after %lu ms\n", timeout_ms);
+	return -ETIMEDOUT;
+}
+
 static void ps4_bridge_reset_mn864729(struct ps4_bridge *mn_bridge)
 {
 	mutex_lock(&mn_bridge->mutex);
@@ -821,12 +858,9 @@ static void ps4_bridge_enable(struct drm_bridge *bridge)
 	}
 	else
 	{
-		/* Panasonic MN864729 */
-		/*
-		 * A successful video programming pass only means the bridge
-		 * command queue completed. The retrain helper returns void, so
-		 * retry the bounded Belize attempts unconditionally here.
-		 */
+		ps4_bridge_wait_dpcd_ready(mn_bridge,
+					   PS4_BRIDGE_DPCD_READY_TIMEOUT_MS);
+
 		for (attempt = 1; attempt <= PS4_BRIDGE_BELIZE_ENABLE_ATTEMPTS;
 		     attempt++) {
 			DRM_DEBUG_KMS("ps4_bridge_enable: Belize attempt %u/%u\n",
@@ -1059,6 +1093,25 @@ int ps4_bridge_get_modes(struct drm_connector *connector)
 							ps4_bridge_read_edid_block_smbus,
 							ddc);
 		}
+	}
+
+	if (drm_edid && g_bridge) {
+		const struct edid *raw = drm_edid_raw(drm_edid);
+		if (raw) {
+			size_t sz = (raw->extensions + 1) * EDID_LENGTH;
+			void *copy = kmemdup(raw, sz, GFP_KERNEL);
+			if (copy) {
+				kfree(g_bridge->cached_edid);
+				g_bridge->cached_edid = copy;
+				g_bridge->cached_edid_size = sz;
+			}
+		}
+	}
+
+	if (!drm_edid && g_bridge && g_bridge->cached_edid) {
+		DRM_DEBUG_KMS("ps4_bridge_get_modes: DDC failed, using cached EDID\n");
+		drm_edid = drm_edid_alloc(g_bridge->cached_edid,
+					  g_bridge->cached_edid_size);
 	}
 
 edid_ready:
