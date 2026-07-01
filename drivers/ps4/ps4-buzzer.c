@@ -1,17 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * PS4 Aeolia Sysfs Buzzer Driver
- *
- * Copyright (C) Armandas Kvietkus <armandas.kvietkus@proton.me>
- *
- * Triggers the front-panel piezo buzzer via the Aeolia EMC ICC
- * indicator channel.  Reverse-engineered from Orbis kernel 12.02.elf.
- *
- * Sysfs interface:
- *   /sys/devices/platform/ps4-buzzer/beep
- *     Write "1" to trigger a beep.
- *     Write "0" to stop (if supported by EMC firmware).
- */
 
 #include <linux/module.h>
 #include <linux/platform_device.h>

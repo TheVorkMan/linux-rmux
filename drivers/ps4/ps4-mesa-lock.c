@@ -1,20 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/*
- * PS4 Mesa kernel lock verification endpoint.
- *
- * Build-time contract:
- *   make PS4_MESA_LOCK_TOKEN=<token>
- *
- * Runtime contract:
- *   - Mesa opens /dev/ps4-mesa-lock for write.
- *   - Mesa writes its compiled-in token with no newline.
- *   - Kernel compares the supplied token against its compiled-in token.
- *   - On match: write succeeds and returns the supplied byte count.
- *   - On mismatch: write fails with -EPERM and dmesg shows:
- *       "ps4-mesa-lock: kernel mismatch"
- *
- * The token is never exposed back to user-space.
- */
 
 #include <linux/errno.h>
 #include <linux/fs.h>

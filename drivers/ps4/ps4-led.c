@@ -1,11 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/**
- * PS4 Aeolia Sysfs LED Driver
- *
- * Copyright (C) rmux <armandas.kvietkus@proton.me>
- *
- * Based on the original LED control work by Saya and PsxItArch.
- */
 
 #include <linux/module.h>
 #include <linux/leds.h>
@@ -14,22 +7,6 @@
 #include "aeolia.h"
 #include "ps4-led.h"
 
-/* ============================================================
- * ICC LED Payloads
- * ============================================================
- * Each array encodes a full ICC command payload for:
- *   Major: PS4_LED_ICC_MAJOR (0x09)
- *   Minor: PS4_LED_ICC_MINOR (0x20)
- *   Length: PS4_LED_PAYLOAD_LEN (35 bytes)
- *
- * These define the diode mix and PWM behavior sent to the
- * Aeolia EMC, which drives the front panel LED hardware.
- * Format is a proprietary binary protocol reverse-engineered
- * from hardware observation.
- *
- */
-
-/** led_off: All LED channels disabled. Front panel dark. */
 static const u8 led_off[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0x00,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x00, 0x02,
@@ -38,7 +15,6 @@ static const u8 led_off[] = {
 	0x05, 0x01, 0xff
 };
 
-/** led_blue: Solid blue. */
 static const u8 led_blue[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0xff,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x00, 0x02,
@@ -47,7 +23,6 @@ static const u8 led_blue[] = {
 	0x05, 0x01, 0xff
 };
 
-/** led_white: Solid white. */
 static const u8 led_white[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0x00,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0xff, 0x02,
@@ -56,7 +31,6 @@ static const u8 led_white[] = {
 	0x05, 0x01, 0xff
 };
 
-/** led_orange: Solid orange. */
 static const u8 led_orange[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0x00,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x00, 0x02,
@@ -65,7 +39,6 @@ static const u8 led_orange[] = {
 	0x05, 0x01, 0x00
 };
 
-/** led_orange_blue: Orange and blue channels simultaneously. */
 static const u8 led_orange_blue[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0xff,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x00, 0x02,
@@ -74,7 +47,6 @@ static const u8 led_orange_blue[] = {
 	0x05, 0x01, 0xff
 };
 
-/** led_orange_white: Orange and white channels simultaneously. */
 static const u8 led_orange_white[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0x00,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0xff, 0x02,
@@ -83,7 +55,6 @@ static const u8 led_orange_white[] = {
 	0x05, 0x01, 0xff
 };
 
-/** led_pulsate_orange: Orange channel with PWM pulsation. */
 static const u8 led_pulsate_orange[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0x00,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x00, 0x02,
@@ -92,7 +63,6 @@ static const u8 led_pulsate_orange[] = {
 	0x05, 0x01, 0x00
 };
 
-/** led_orange_white_blue: All three channels active together. */
 static const u8 led_orange_white_blue[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0xff,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0xff, 0x02,
@@ -101,7 +71,6 @@ static const u8 led_orange_white_blue[] = {
 	0x05, 0x01, 0xff
 };
 
-/** led_white_blue: White and blue channels simultaneously. */
 static const u8 led_white_blue[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0xff,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0xff, 0x02,
@@ -110,7 +79,6 @@ static const u8 led_white_blue[] = {
 	0x05, 0x01, 0xff
 };
 
-/** led_violet_blue: Violet-tinted blue (partial blue channel). */
 static const u8 led_violet_blue[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0x57,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x00, 0x02,
@@ -119,7 +87,6 @@ static const u8 led_violet_blue[] = {
 	0x05, 0x01, 0x00
 };
 
-/** led_pink: Pink hue (partial white + orange blend). */
 static const u8 led_pink[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0x00,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x30, 0x02,
@@ -128,7 +95,6 @@ static const u8 led_pink[] = {
 	0x05, 0x01, 0x00
 };
 
-/** led_pink_blue: Pink with a blue tint (partial blue + orange). */
 static const u8 led_pink_blue[] = {
 	0x03, 0x01, 0x00, 0x00, 0x10, 0x01, 0x02, 0x20,
 	0x02, 0x01, 0x00, 0x11, 0x01, 0x02, 0x00, 0x02,
@@ -145,11 +111,6 @@ static const u8 led_purple[] = {
 	0x05, 0x01, 0xff
 };
 
-/* ============================================================
- * struct ps4_led_node - LED class device and manual payload pair
- * @cdev: LED class device exposed to userspace.
- * @payload: ICC LED payload sent for nonzero brightness values.
- */
 struct ps4_led_node {
 	struct led_classdev cdev;
 	const u8 *payload;
@@ -158,15 +119,6 @@ struct ps4_led_node {
 static DEFINE_MUTEX(ps4_led_lock);
 static const u8 *ps4_led_current_payload;
 
-/* ============================================================
- * ps4_led_set_blocking - LED class brightness callback
- * ============================================================
- * @led_cdev: The LED class device whose brightness changed.
- * @value:    LED_OFF (0) to turn off, any positive value to enable.
- *
- * Called by the LED subsystem when user-space writes to a
- * /sys/class/leds/ps4:<color>:status/brightness node.
- */
 static int ps4_led_set_blocking(struct led_classdev *led_cdev,
 				enum led_brightness value)
 {
@@ -206,14 +158,6 @@ static int ps4_led_set_blocking(struct led_classdev *led_cdev,
 	return 0;
 }
 
-/* ============================================================
- * LED Class Device Nodes
- * ============================================================
- * One struct ps4_led_node per color/effect. Each pairs a LED class
- * node with the manual ICC payload sent for nonzero brightness.
- * Registered via devm_led_classdev_register() in probe().
- * Exposed at /sys/class/leds/ps4:<color>:status/
- */
 static struct ps4_led_node ps4_led_nodes[] = {
 	{
 		.cdev = {
@@ -313,9 +257,6 @@ static struct ps4_led_node ps4_led_nodes[] = {
 	},
 };
 
-/* ============================================================
- * ps4_led_probe - Register LED class nodes
- * ============================================================ */
 static int ps4_led_probe(struct platform_device *pdev)
 {
 	u8 reply[0x30];
@@ -348,10 +289,6 @@ static int ps4_led_probe(struct platform_device *pdev)
 	return 0;
 }
 
-/* ============================================================
- * Platform Driver Struct
- * ============================================================
- */
 static struct platform_driver ps4_led_driver = {
 	.probe  = ps4_led_probe,
 	.driver = {
@@ -359,25 +296,8 @@ static struct platform_driver ps4_led_driver = {
 	},
 };
 
-/* ============================================================
- * Module Init / Exit
- * ============================================================
- * Manual init/exit (not module_platform_driver) because we must
- * register both the driver and the platform_device from within
- * the module.
- *
- * Init : register driver first, then device (probe fires).
- * Exit : unregister device first, then driver.
- */
 static struct platform_device *ps4_led_pdev;
 
-/**
- * ps4_led_init - Module entry point.
- *
- * Registers the platform driver, then the platform device.
- * On device registration failure, the driver is unregistered
- * before returning to leave the system in a clean state.
- */
 static int __init ps4_led_init(void)
 {
 	int ret;
@@ -403,11 +323,6 @@ static int __init ps4_led_init(void)
 	return 0;
 }
 
-/**
- * ps4_led_exit - Module exit point.
- *
- * Unregisters the platform device first, then the driver.
- */
 static void __exit ps4_led_exit(void)
 {
 	if (ps4_led_pdev)

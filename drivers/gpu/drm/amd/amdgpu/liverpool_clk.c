@@ -1,71 +1,4 @@
 // SPDX-License-Identifier: MIT
-/**
- * liverpool_clk.c” PS4 Liverpool/Gladius GPU clock force driver
- *
- * Copyright (C) rmux <armandas.kvietkus@proton.me>
- *
- * Based on ci_dpm.c (AMD GCN DPM framework).
- * Thanks to fail0verflow for ps4-kexec and the Liverpool register map.
- * Thanks to the ps4-linux community for hardware research and testing.
- *
- * ============================================================
- * Root Cause
- * ============================================================
- * ps4-kexec performs a GFX soft-reset (RCU_GFX_STRAP |= 0x10003)
- * before handing off to Linux. On GCN hardware a GFX soft-reset
- * causes the SCLK divider (DID) to revert to the fuse-burnt startup
- * value in GCK_SCLK_FUSES.StartupSClkDid, which corresponds to the
- * strap/boot frequency (~200-300 MHz on Liverpool).
- *
- * pp_smu_ip_block is present in the IP block list for CHIP_LIVERPOOL
- * and CHIP_GLADIUS but produces no functional DPM table and has never
- * raised the clock across any ps4-linux rebase. The GPU runs at strap
- * speed permanently.
- *
- * ============================================================
- * Fix
- * ============================================================
- * Use the CG_SCLK_CNTL direct-control path (SCLKDIRCNTLEN +
- * SCLKDIRCNTLTOG) to force SCLKDIRCNTLDIVIDER = 1 (DID 1, divide-
- * by-1, full SPLL output) from cik_common_hw_init(), before any GFX
- * ring or shader work begins.
- *
- * SCLKDIRCNTLEN is kept set permanently. This prevents any dormant
- * DPM path from lowering the clock autonomously.
- *
- * ============================================================
- * SPLL State After Soft-Reset
- * ============================================================
- * A GFX soft-reset does not reconfigure the GCK PLL block (separate
- * power domain managed by SMC firmware). The SPLL remains locked to
- * the operating frequency (~800 MHz Liverpool, ~911 MHz Gladius) set
- * by the BIOS/hypervisor before kexec. Only the post-divider (DID)
- * is reset. Forcing DID=1 restores the full SPLL output.
- *
- * If SPLL PDIVA > 4 at init time the SPLL may have been reconfigured
- * by the soft-reset. The function logs PDIVA and FBDIV in that case
- * for follow-up SPLL reprogramming support.
- *
- * ============================================================
- * Voltage
- * ============================================================
- * The BIOS/hypervisor that configured the SPLL also set VID rails to
- * operational levels before kexec. A GFX soft-reset does not touch
- * the power plane.
- *
- * The EMC (Aeolia/Belize/Baikal, ARM Cortex-M3) provides an
- * independent hardware thermal kill at 72 C (GPU domain, ICC command
- * 0x0B/0x05 domain 2) and 97 C (APU shutdown) regardless of what
- * Linux writes into the clock registers.
- *
- * ============================================================
- * Register Reference
- * ============================================================
- * All registers accessed via RREG32_SMC / WREG32_SMC (SMC indirect
- * at mmSMC_IND_INDEX_0 / mmSMC_IND_DATA_0, initialised in
- * cik_common_early_init before this function is called).
- * Source: bonaire.rai, GCK block. See liverpool_clk.h for field map.
- */
 
 #include <linux/delay.h>
 #include "amdgpu.h"
@@ -112,20 +45,6 @@
 #define LIVERPOOL_CLK_TIMEOUT_US        10
 #define LIVERPOOL_CLK_TIMEOUT_ITER      1000
 
-/* ============================================================
- * liverpool_clk_force_max - Force GPU SCLK to maximum
- * ============================================================
- * @adev: amdgpu device pointer (CHIP_LIVERPOOL or CHIP_GLADIUS)
- *
- * Called from cik_common_hw_init() before any GFX or SDMA ring
- * work. Uses CG_SCLK_CNTL direct-control mode so the change takes
- * effect without going through the SMU message protocol.
- *
- * Logs SPLL state (PDIVA, FBDIV) at init time. A PDIVA > 4 warning
- * means the SPLL may need reprogramming â€” report the values.
- *
- * Returns 0 on success, -ETIMEDOUT if hardware does not respond.
- */
 int liverpool_clk_force_max(struct amdgpu_device *adev)
 {
 	u32 spll_fuses, sclk_fuses, spll_cntl, spll_fb;
@@ -158,7 +77,7 @@ int liverpool_clk_force_max(struct amdgpu_device *adev)
 
 	if (spll_pdiva > 4)
 		dev_warn(adev->dev,
-			 "Liverpool CLK: SPLL PDIVA=%u > 4 â€” SPLL may have been "
+			 "Liverpool CLK: SPLL PDIVA=%u > 4 -- SPLL may have been "
 			 "reconfigured by soft-reset. Report PDIVA+FBDIV.\n",
 			 spll_pdiva);
 
@@ -224,7 +143,7 @@ int liverpool_clk_force_max(struct amdgpu_device *adev)
 
 	if (((cntl & SCLK_DIRCNTL_DIV_MASK) >> SCLK_DIRCNTL_DIV_SHIFT) != LIVERPOOL_TARGET_SCLK_DID)
 		dev_warn(adev->dev,
-			 "Liverpool CLK: readback DID mismatch â€” expected %u got %u\n",
+			 "Liverpool CLK: readback DID mismatch -- expected %u got %u\n",
 			 LIVERPOOL_TARGET_SCLK_DID,
 			 (cntl & SCLK_DIRCNTL_DIV_MASK) >> SCLK_DIRCNTL_DIV_SHIFT);
 
