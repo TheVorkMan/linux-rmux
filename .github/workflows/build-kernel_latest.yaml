@@ -188,8 +188,15 @@ jobs:
 
           printf '%s\n' "\${ARTIFACT_FILE}" > /container/workspace/kernel-source-container/artifact_name.txt
           EOF
+          DOCKER_EXEC_STATUS=$?
 
           cd "${{ github.workspace }}/kernel-source-host"
+
+          if [ "$DOCKER_EXEC_STATUS" -ne 0 ]; then
+            echo "::error::kernel build failed inside container (exit $DOCKER_EXEC_STATUS)"
+            exit "$DOCKER_EXEC_STATUS"
+          fi
+
           echo "compile-kernel-complete=true" >> "$GITHUB_OUTPUT"
           set -e
 
