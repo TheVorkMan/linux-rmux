@@ -624,7 +624,11 @@ int mtk_p2p_cfg80211_del_iface(struct wiphy *wiphy, struct wireless_dev *wdev)
 
 /* link_id was introduced to nl80211 ops in Linux 6.0, changing many functions prototypes:
  * https://github.com/torvalds/linux/commit/7b0a0e3c3a88260b6fcb017e49f198463aa62ed1 */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+int mtk_p2p_cfg80211_add_key(struct wiphy *wiphy,
+			     struct wireless_dev *wdev, int link_id,
+			     u8 key_index, bool pairwise, const u8 *mac_addr, struct key_params *params)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 int mtk_p2p_cfg80211_add_key(struct wiphy *wiphy,
 			     struct net_device *ndev, int link_id,
 			     u8 key_index, bool pairwise, const u8 *mac_addr, struct key_params *params)
@@ -634,6 +638,9 @@ int mtk_p2p_cfg80211_add_key(struct wiphy *wiphy,
 			     u8 key_index, bool pairwise, const u8 *mac_addr, struct key_params *params)
 #endif
 {
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+	struct net_device *ndev = wdev->netdev;
+#endif
 	P_GLUE_INFO_T prGlueInfo = NULL;
 	INT_32 i4Rslt = -EINVAL;
 	WLAN_STATUS rStatus = WLAN_STATUS_SUCCESS;
@@ -774,7 +781,15 @@ int mtk_p2p_cfg80211_add_key(struct wiphy *wiphy,
 }
 
 /* see note above about link id introduction */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+int mtk_p2p_cfg80211_get_key(struct wiphy *wiphy,
+			     struct wireless_dev *wdev,
+			     int link_id,
+			     u8 key_index,
+			     bool pairwise,
+			     const u8 *mac_addr, void *cookie, void (*callback) (void *cookie, struct key_params *)
+)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 int mtk_p2p_cfg80211_get_key(struct wiphy *wiphy,
 			     struct net_device *ndev,
 			     int link_id,
@@ -803,7 +818,10 @@ int mtk_p2p_cfg80211_get_key(struct wiphy *wiphy,
 }
 
 /* see note above about link id introduction */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+int mtk_p2p_cfg80211_del_key(struct wiphy *wiphy,
+			     struct wireless_dev *wdev, int link_id, u8 key_index, bool pairwise, const u8 *mac_addr)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 int mtk_p2p_cfg80211_del_key(struct wiphy *wiphy,
 			     struct net_device *ndev, int link_id, u8 key_index, bool pairwise, const u8 *mac_addr)
 #else
@@ -811,6 +829,9 @@ int mtk_p2p_cfg80211_del_key(struct wiphy *wiphy,
 			     struct net_device *ndev, u8 key_index, bool pairwise, const u8 *mac_addr)
 #endif
 {
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+	struct net_device *ndev = wdev->netdev;
+#endif
 	P_GLUE_INFO_T prGlueInfo = NULL;
 	PARAM_REMOVE_KEY_T rRemoveKey;
 	INT_32 i4Rslt = -EINVAL;
@@ -929,7 +950,9 @@ mtk_p2p_cfg80211_set_default_key(struct wiphy *wiphy,
 /*----------------------------------------------------------------------------*/
 
 /* see note above about link id introduction */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+int mtk_p2p_cfg80211_set_mgmt_key(struct wiphy *wiphy, struct wireless_dev *wdev, int link_id, u8 key_index)
+#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0))
 int mtk_p2p_cfg80211_set_mgmt_key(struct wiphy *wiphy, struct net_device *dev, int link_id, u8 key_index)
 #else
 int mtk_p2p_cfg80211_set_mgmt_key(struct wiphy *wiphy, struct net_device *dev, u8 key_index)
@@ -940,7 +963,51 @@ int mtk_p2p_cfg80211_set_mgmt_key(struct wiphy *wiphy, struct net_device *dev, u
 	return 0;
 }
 
-#if KERNEL_VERSION(3, 16, 0) <= CFG80211_VERSION_CODE
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+int mtk_p2p_cfg80211_get_station(struct wiphy *wiphy, struct wireless_dev *wdev,
+		const u8 *mac, struct station_info *sinfo)
+{
+	struct net_device *ndev = wdev ? wdev->netdev : NULL;
+	INT_32 i4RetRslt = -EINVAL;
+	UINT_8 ucRoleIdx = 0;
+	P_GLUE_INFO_T prGlueInfo = (P_GLUE_INFO_T) NULL;
+	P_GL_P2P_INFO_T prP2pGlueInfo = (P_GL_P2P_INFO_T) NULL;
+	P2P_STATION_INFO_T rP2pStaInfo;
+
+	ASSERT(wiphy);
+
+	do {
+		if ((wiphy == NULL) || (ndev == NULL) || (sinfo == NULL) || (mac == NULL))
+			break;
+
+		DBGLOG(P2P, TRACE, "mtk_p2p_cfg80211_get_station\n");
+
+		prGlueInfo = *((P_GLUE_INFO_T *) wiphy_priv(wiphy));
+
+		if (mtk_Netdev_To_RoleIdx(prGlueInfo, ndev, &ucRoleIdx) != 0)
+			return -EINVAL;
+
+		prP2pGlueInfo = prGlueInfo->prP2PInfo[ucRoleIdx];
+
+		sinfo->filled = 0;
+
+		/* Get station information. */
+		/* 1. Inactive time? */
+		p2pFuncGetStationInfo(prGlueInfo->prAdapter, (PUINT_8)mac, &rP2pStaInfo);
+#if KERNEL_VERSION(4, 0, 0) <= CFG80211_VERSION_CODE
+		sinfo->filled |= BIT(NL80211_STA_INFO_INACTIVE_TIME);
+#else
+		sinfo->filled |= STATION_INFO_INACTIVE_TIME;
+#endif
+		sinfo->inactive_time = rP2pStaInfo.u4InactiveTime;
+		sinfo->generation = prP2pGlueInfo->i4Generation;
+
+		i4RetRslt = 0;
+	} while (FALSE);
+
+	return i4RetRslt;
+}
+#elif KERNEL_VERSION(3, 16, 0) <= CFG80211_VERSION_CODE
 int mtk_p2p_cfg80211_get_station(struct wiphy *wiphy, struct net_device *ndev,
 		const u8 *mac, struct station_info *sinfo)
 {
@@ -2410,7 +2477,59 @@ int mtk_p2p_cfg80211_change_bss(struct wiphy *wiphy, struct net_device *dev, str
 }				/* mtk_p2p_cfg80211_change_bss */
 
 #if KERNEL_VERSION(3, 16, 0) <= CFG80211_VERSION_CODE
-#if KERNEL_VERSION(3, 19, 0) <= CFG80211_VERSION_CODE
+#if KERNEL_VERSION(6, 7, 0) <= CFG80211_VERSION_CODE
+static const u8 bcast_addr[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+int mtk_p2p_cfg80211_del_station(struct wiphy *wiphy, struct wireless_dev *wdev, struct station_del_parameters *params)
+{
+	struct net_device *dev = wdev ? wdev->netdev : NULL;
+	const u8 *mac = params->mac ? params->mac : bcast_addr;
+	P_GLUE_INFO_T prGlueInfo = (P_GLUE_INFO_T) NULL;
+	INT_32 i4Rslt = -EINVAL;
+	P_MSG_P2P_CONNECTION_ABORT_T prDisconnectMsg = (P_MSG_P2P_CONNECTION_ABORT_T) NULL;
+	UINT_8 aucBcMac[] = BC_MAC_ADDR;
+	UINT_8 ucRoleIdx = 0;
+
+	do {
+		if ((wiphy == NULL) || (dev == NULL))
+			break;
+
+		if (mac == NULL)
+			mac = aucBcMac;
+
+		DBGLOG(P2P, TRACE, "mtk_p2p_cfg80211_del_station.\n");
+
+		prGlueInfo = *((P_GLUE_INFO_T *) wiphy_priv(wiphy));
+
+
+		if (mtk_Netdev_To_RoleIdx(prGlueInfo, dev, &ucRoleIdx) < 0)
+			break;
+
+		prDisconnectMsg =
+		    (P_MSG_P2P_CONNECTION_ABORT_T) cnmMemAlloc(prGlueInfo->prAdapter, RAM_TYPE_MSG,
+							       sizeof(MSG_P2P_CONNECTION_ABORT_T));
+
+		if (prDisconnectMsg == NULL) {
+			ASSERT(FALSE);
+			i4Rslt = -ENOMEM;
+			break;
+		}
+
+		prDisconnectMsg->rMsgHdr.eMsgId = MID_MNY_P2P_CONNECTION_ABORT;
+		prDisconnectMsg->ucRoleIdx = ucRoleIdx;
+		COPY_MAC_ADDR(prDisconnectMsg->aucTargetID, mac);
+		prDisconnectMsg->u2ReasonCode = REASON_CODE_UNSPECIFIED;
+		prDisconnectMsg->fgSendDeauth = TRUE;
+
+
+		mboxSendMsg(prGlueInfo->prAdapter, MBOX_ID_0, (P_MSG_HDR_T) prDisconnectMsg, MSG_SEND_METHOD_BUF);
+
+		i4Rslt = 0;
+	} while (FALSE);
+
+	return i4Rslt;
+
+}				/* mtk_p2p_cfg80211_del_station */
+#elif KERNEL_VERSION(3, 19, 0) <= CFG80211_VERSION_CODE
 static const u8 bcast_addr[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 int mtk_p2p_cfg80211_del_station(struct wiphy *wiphy, struct net_device *dev, struct station_del_parameters *params)
 {
