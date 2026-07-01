@@ -426,6 +426,8 @@ static int ps4_fan_probe(struct platform_device *pdev)
 {
 	struct ps4_fan_priv *priv;
 	struct device *hwmon_dev;
+	long temp_mc = 0, thresh_mc = 0, rpm = 0;
+	int ret;
 
 	priv = devm_kzalloc(&pdev->dev, sizeof(*priv), GFP_KERNEL);
 	if (!priv)
@@ -440,10 +442,21 @@ static int ps4_fan_probe(struct platform_device *pdev)
 	if (IS_ERR(hwmon_dev))
 		return PTR_ERR(hwmon_dev);
 
+	mutex_lock(&priv->lock);
+
+	ret = icc_write_fan_threshold(PS4_FAN_THRESH_DEFAULT_MC);
+	if (ret)
+		dev_warn(&pdev->dev, "failed to set fan threshold: %d\n", ret);
+
+	icc_read_apu_temp(&temp_mc);
+	icc_read_fan_threshold(&thresh_mc);
+	icc_read_fan_rpm(&rpm);
+
+	mutex_unlock(&priv->lock);
+
 	dev_info(&pdev->dev,
-		 "PS4 fan hwmon ready — "
-		 "temp1_input, temp1_crit (%d–%d°C), fan1_input\n",
-		 PS4_FAN_THRESH_MIN_C, PS4_FAN_THRESH_MAX_C);
+		 "PS4 fan hwmon ready: temp=%ldC threshold=%ldC rpm=%ld\n",
+		 temp_mc / 1000, thresh_mc / 1000, rpm);
 	return 0;
 }
 
