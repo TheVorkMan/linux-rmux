@@ -341,7 +341,7 @@ fi
 if [[ "$DO_BUILD" == "1" ]]; then
     echo -e "\e[1;34m[*]\e[0m Applying invariant config..."
 
-    LOCALVERSION_SUFFIX="-Strawberry-$(lto_label)-"
+    LOCALVERSION_SUFFIX="-Strawberry-$(lto_label)"
 
     # Build system / LTO
     if [[ "$LTO_FLAVOR" == "full" ]]; then
