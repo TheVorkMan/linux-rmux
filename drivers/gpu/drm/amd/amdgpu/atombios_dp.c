@@ -173,6 +173,9 @@ amdgpu_atombios_dp_aux_transfer(struct drm_dp_aux *aux, struct drm_dp_aux_msg *m
 			tx_buf[3] |= tx_size << 4;
 		ret = amdgpu_atombios_dp_process_aux_ch(chan,
 						 tx_buf, tx_size, msg->buffer, msg->size, delay, &ack);
+		DRM_DEBUG_KMS("aux xfer: addr=0x%05x req=0x%x size=%zu ret=%d ack=0x%02x buf=%*ph\n",
+			      msg->address, msg->request, msg->size, ret, ack,
+			      (int)msg->size, msg->buffer);
 		break;
 	default:
 		ret = -EINVAL;
