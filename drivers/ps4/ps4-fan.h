@@ -115,7 +115,7 @@
  * ============================================================ */
 #define PS4_FAN_THRESH_MIN_C            20
 #define PS4_FAN_THRESH_MAX_C            85
-#define PS4_FAN_THRESH_DEFAULT_C        55
+#define PS4_FAN_THRESH_DEFAULT_C        65
 
 #define PS4_FAN_THRESH_MIN_MC           ((long)(PS4_FAN_THRESH_MIN_C) * 1000L)
 #define PS4_FAN_THRESH_MAX_MC           ((long)(PS4_FAN_THRESH_MAX_C) * 1000L)
