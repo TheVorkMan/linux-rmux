@@ -635,6 +635,7 @@ amdgpu_atombios_dp_link_train_cr(struct amdgpu_atombios_dp_link_train_info *dp_i
 			DRM_ERROR("displayport link status failed\n");
 			break;
 		}
+		DRM_DEBUG_KMS("dp cr: link_status raw=%6ph\n", dp_info->link_status);
 
 		if (drm_dp_clock_recovery_ok(dp_info->link_status, dp_info->dp_lane_count)) {
 			clock_recovery = true;
@@ -664,6 +665,7 @@ amdgpu_atombios_dp_link_train_cr(struct amdgpu_atombios_dp_link_train_info *dp_i
 		/* Compute new train_set as requested by sink */
 		amdgpu_atombios_dp_get_adjust_train(dp_info->link_status, dp_info->dp_lane_count,
 					     dp_info->train_set);
+		DRM_DEBUG_KMS("dp cr: train_set=%4ph\n", dp_info->train_set);
 
 		amdgpu_atombios_dp_update_vs_emph(dp_info);
 	}
