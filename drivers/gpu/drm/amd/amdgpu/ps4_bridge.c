@@ -649,6 +649,15 @@ static int ps4_bridge_enable_mn864729_video(struct ps4_bridge *mn_bridge,
 	if (ret < 0)
 		DRM_ERROR("Failed to configure ps4-bridge (MN864729) mode\n");
 
+	cq_init(&mn_bridge->cq, 1);
+	cq_read(&mn_bridge->cq, 0x60f8, 2);
+	if (cq_exec(&mn_bridge->cq) >= 5)
+		DRM_DEBUG_KMS("mn864729: 0x60f8=0x%02x 0x60f9=0x%02x\n",
+			      mn_bridge->cq.reply.databuf[3],
+			      mn_bridge->cq.reply.databuf[4]);
+	else
+		DRM_DEBUG_KMS("mn864729: 0x60f8/0x60f9 readback failed\n");
+
 	mutex_unlock(&mn_bridge->mutex);
 
 	return ret < 0 ? ret : 0;
