@@ -100,6 +100,13 @@ jobs:
           fetch-depth: 1
           clean: false
 
+      - name: Discord Webhook
+        uses: tsickert/discord-webhook@v7
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: |
+            Workflow started!
+
       - name: Copy Dockerfile and .dockerignore to workspace root
         run: |
           cp kernel-source-host/Dockerfile ./Dockerfile
