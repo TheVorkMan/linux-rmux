@@ -181,10 +181,12 @@ jobs:
           if [[ -z "\$ARTIFACT_BASENAME" ]]; then
             ARTIFACT_BASENAME="Strawberry-\${TARGET_LTO}-\${TARGET_PROFILE}-LTS"
           fi
-          ARTIFACT_FILE="\${ARTIFACT_BASENAME}.tar.gz"
+          ARTIFACT_FILE="\${ARTIFACT_BASENAME}.zip"
 
-          tar -cvzf "/container/workspace/kernel-source-container/\${ARTIFACT_FILE}" \
-            -C out bzImage .config --owner=0 --group=0
+          (
+            cd out
+            zip -r "../${ARTIFACT_FILE}" bzImage .config
+          )
 
           printf '%s\n' "\${ARTIFACT_FILE}" > /container/workspace/kernel-source-container/artifact_name.txt
           EOF
