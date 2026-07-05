@@ -92,6 +92,18 @@ jobs:
           path: kernel-source-host
           key: ${{ env.CACHE_WORKSPACE_RESTORE_KEY }}-${{ steps.build-vars.outputs.cache_suffix }}
 
+      - name: Discord Webhook
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: |
+            Kernel build workflow `#${{ github.run_number }} ${{ github.workflow }}` on branch `${{ github.ref_name }} started by `${{ github.actor }}`
+            Estimated build time: ~20m
+            https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      - env:
+         GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh run --repo ${{ github.repository }} view ${{ github.run_id }} --json jobs --jq '.jobs[] | select(.name == "${{ github.job }}") | .url'
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -99,13 +111,6 @@ jobs:
           ref: ${{ github.ref }}
           fetch-depth: 1
           clean: false
-
-      - name: Discord Webhook
-        uses: tsickert/discord-webhook@v7.0.0
-        with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
-          content: |
-            Workflow started!
 
       - name: Copy Dockerfile and .dockerignore to workspace root
         run: |
