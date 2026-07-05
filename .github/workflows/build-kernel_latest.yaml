@@ -165,6 +165,7 @@ jobs:
 
           docker exec -i kernel bash <<EOF
           set -e
+          zip --version
 
           TARGET_PROFILE="${{ steps.build-vars.outputs.target_profile }}"
           TARGET_LTO="${{ steps.build-vars.outputs.target_lto }}"
