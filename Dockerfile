@@ -39,7 +39,7 @@ ENV TZ=Etc/UTC
 RUN <<"EOF"
 #DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get update did not work.
 apt-get update
-apt-get install build-essential clang clang-14 lld lld-14 llvm llvm-14 wget git -y
+apt-get install build-essential clang clang-14 lld lld-14 llvm llvm-14 wget git zip -y
 #clang-17 lld-17 llvm-17 
 
 # I think llvm meta package is not needed for Kernel build. Nevermind it is.
