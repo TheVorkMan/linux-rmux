@@ -97,7 +97,7 @@ jobs:
         env:
           RUN_NAME: "${{ github.event_name == 'workflow_dispatch' && format('Strawberry-{0}-{1}', inputs.profile, inputs.lto) || format('Strawberry-tag-{0}', github.ref_name) }}"
         with:
-          webhook-url: ${{ secrets.DISCORD_WORKFLOW_WEBHOOK }}
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
           content: |
             Kernel build workflow run `#${{ github.run_number }} ${{ env.RUN_NAME }}` on branch `${{ github.ref_name }}` started by `${{ github.actor }}`
             Estimated build time: ${{ inputs.profile == 'Server' && '`~50m`' || '`~20m`' }}
