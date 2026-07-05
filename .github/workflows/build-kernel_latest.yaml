@@ -170,14 +170,19 @@ jobs:
           if [[ -z "\$ARTIFACT_BASENAME" ]]; then
             ARTIFACT_BASENAME="Strawberry-\${TARGET_LTO}-\${TARGET_PROFILE}-LTS"
           fi
-          ARTIFACT_FILE="\${ARTIFACT_BASENAME}.zip"
+          ARTIFACT_ZIP_FILE="\${ARTIFACT_BASENAME}.zip"
+          ARTIFACT_TARGZ_FILE="\${ARTIFACT_BASENAME}.tar.gz"
 
           (
             cd out
-            zip -r "../${ARTIFACT_FILE}" bzImage .config
+            zip -r "../\${ARTIFACT_ZIP_FILE}" bzImage .config
           )
 
-          printf '%s\n' "\${ARTIFACT_FILE}" > /container/workspace/kernel-source-container/artifact_name.txt
+          tar -cvzf "/container/workspace/kernel-source-container/\${ARTIFACT_TARGZ_FILE}" \
+            -C out bzImage .config --owner=0 --group=0
+
+          printf '%s\n' "\${ARTIFACT_ZIP_FILE}" > /container/workspace/kernel-source-container/artifact_zip_name.txt
+          printf '%s\n' "\${ARTIFACT_TARGZ_FILE}" > /container/workspace/kernel-source-container/artifact_targz_name.txt
           EOF
           DOCKER_EXEC_STATUS=$?
 
@@ -198,14 +203,23 @@ jobs:
         id: read-artifact
         working-directory: kernel-source-host
         run: |
-          ARTIFACT_NAME="$(cat artifact_name.txt 2>/dev/null || echo kernel.tar.gz)"
-          echo "pkg_name=${ARTIFACT_NAME}" >> "$GITHUB_OUTPUT"
+          ARTIFACT_ZIP_NAME="$(cat artifact_zip_name.txt 2>/dev/null || echo kernel.zip)"
+          ARTIFACT_TARGZ_NAME="$(cat artifact_targz_name.txt 2>/dev/null || echo kernel.tar.gz)"
+          echo "pkg_zip_name=${ARTIFACT_ZIP_NAME}" >> "$GITHUB_OUTPUT"
+          echo "pkg_targz_name=${ARTIFACT_TARGZ_NAME}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload kernel image to github actions artifacts
+      - name: Upload kernel image in zip to github actions artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.read-artifact.outputs.pkg_name }}
-          path: kernel-source-host/${{ steps.read-artifact.outputs.pkg_name }}
+          name: ${{ steps.read-artifact.outputs.pkg_zip_name }}
+          path: kernel-source-host/${{ steps.read-artifact.outputs.pkg_zip_name }}
+          archive: false
+
+      - name: Upload kernel image in .tar.gz to github actions artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.read-artifact.outputs.pkg_targz_name }}
+          path: kernel-source-host/${{ steps.read-artifact.outputs.pkg_targz_name }}
           archive: false
 
       - name: Delete Cache of Github Workspace
