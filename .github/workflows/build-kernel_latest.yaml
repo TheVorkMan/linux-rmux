@@ -94,12 +94,15 @@ jobs:
 
       - name: Discord Webhook Workflow Run Announcement
         uses: tsickert/discord-webhook@v7.0.0
+        env:
+          RUN_NAME: "${{ github.event_name == 'workflow_dispatch' && format('Strawberry-{0}-{1}', inputs.profile, inputs.lto) || format('Strawberry-tag-{0}', github.ref_name) }}"
         with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          webhook-url: ${{ secrets.DISCORD_WORKFLOW_WEBHOOK }}
           content: |
-            Kernel build workflow run `#${{ github.run_number }} ${{ github.run_name }}` on branch `${{ github.ref_name }}` started by `${{ github.actor }}`
-            Estimated build time: `~17m`
+            Kernel build workflow run `#${{ github.run_number }} ${{ env.RUN_NAME }}` on branch `${{ github.ref_name }}` started by `${{ github.actor }}`
+            Estimated build time: ${{ inputs.profile == 'Server' && '`~50m`' || '`~20m`' }}
             https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
       - env:
          GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -234,7 +237,7 @@ jobs:
           path: kernel-source-host/${{ steps.read-artifact.outputs.pkg_targz_name }}
           archive: false
 
-      - name: Discord Webhook Artifact Announcement
+      - name: Discord Webhook Artifact Annoucment
         uses: tsickert/discord-webhook@v7.0.0
         with:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
